@@ -1,6 +1,7 @@
 """Gera stats.svg com estatísticas públicas do utilizador, usando só a API do GitHub."""
 import json
 import os
+import re
 import urllib.request
 from datetime import date, datetime, timedelta
 from html import escape
@@ -18,6 +19,18 @@ def api(path):
     req = urllib.request.Request(f"https://api.github.com{path}", headers=HEADERS)
     with urllib.request.urlopen(req) as r:
         return json.load(r)
+
+
+def contar(path):
+    """Total de itens de uma listagem, lido da última página com per_page=1."""
+    sep = "&" if "?" in path else "?"
+    req = urllib.request.Request(f"https://api.github.com{path}{sep}per_page=1", headers=HEADERS)
+    try:
+        with urllib.request.urlopen(req) as r:
+            ultima = re.search(r'[?&]page=(\d+)>; rel="last"', r.headers.get("Link", ""))
+            return int(ultima.group(1)) if ultima else len(json.load(r))
+    except Exception:
+        return 0
 
 
 def tentar(path, vazio):
@@ -54,9 +67,11 @@ while d0 <= date.today():
     dias.append({"date": d0.isoformat(), "contributionCount": contagem.get(d0.isoformat(), 0)})
     d0 += timedelta(days=1)
 
-commits_total = tentar(f"/search/commits?q=author:{USER}&per_page=1", {}).get("total_count", 0)
-prs = tentar(f"/search/issues?q=author:{USER}+type:pr&per_page=1", {}).get("total_count", 0)
-issues = tentar(f"/search/issues?q=author:{USER}+type:issue&per_page=1", {}).get("total_count", 0)
+commits_total = sum(contar(f"/repos/{USER}/{r['name']}/commits?author={USER}") for r in own)
+prs = sum(contar(f"/repos/{USER}/{r['name']}/pulls?state=all") for r in own)
+issues = sum(r["open_issues_count"] for r in own) - sum(
+    contar(f"/repos/{USER}/{r['name']}/pulls?state=open") for r in own
+)
 commits_12m = sum(contagem.values())
 
 hoje = date.today().isoformat()
