@@ -31,11 +31,12 @@
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 
-## 📊 Estatísticas
+## 📊 GitHub
 
 <p align="center">
-  <img height="170" src="https://github-readme-stats.vercel.app/api?username=J040-99&show_icons=true&theme=tokyonight&hide_border=true" alt="Estatísticas GitHub" />
-  <img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=J040-99&layout=compact&theme=tokyonight&hide_border=true" alt="Linguagens mais usadas" />
+  <img src="https://img.shields.io/github/followers/J040-99?style=for-the-badge&logo=github&label=Seguidores" alt="Seguidores" />
+  <img src="https://img.shields.io/badge/Reposit%C3%B3rios%20p%C3%BAblicos-9-blue?style=for-the-badge&logo=github" alt="Repositórios públicos" />
+  <img src="https://komarev.com/ghpvc/?username=J040-99&style=for-the-badge&label=Visitas" alt="Visitas ao perfil" />
 </p>
 
 ## 🌱 A aprender
