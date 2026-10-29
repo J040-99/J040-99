@@ -34,6 +34,10 @@
 ## 📊 GitHub
 
 <p align="center">
+  <img src="./stats.svg" alt="Estatísticas do GitHub" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/github/followers/J040-99?style=for-the-badge&logo=github&label=Seguidores" alt="Seguidores" />
   <img src="https://img.shields.io/badge/Reposit%C3%B3rios%20p%C3%BAblicos-9-blue?style=for-the-badge&logo=github" alt="Repositórios públicos" />
   <img src="https://komarev.com/ghpvc/?username=J040-99&style=for-the-badge&label=Visitas" alt="Visitas ao perfil" />
