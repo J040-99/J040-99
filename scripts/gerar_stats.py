@@ -2,7 +2,7 @@
 import json
 import os
 import urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from html import escape
 
 USER = "J040-99"
@@ -20,39 +20,47 @@ def api(path):
         return json.load(r)
 
 
-def graphql(query):
-    req = urllib.request.Request(
-        "https://api.github.com/graphql",
-        data=json.dumps({"query": query}).encode(),
-        headers=HEADERS,
-    )
-    with urllib.request.urlopen(req) as r:
-        return json.load(r)["data"]["user"]
+def tentar(path, vazio):
+    try:
+        return api(path)
+    except Exception:
+        return vazio
 
 
 user = api(f"/users/{USER}")
 repos = api(f"/users/{USER}/repos?per_page=100&type=owner")
 own = [r for r in repos if not r["fork"]]
 
-gql = graphql(
-    """{ user(login: "%s") {
-      contributionsCollection {
-        totalCommitContributions
-        totalPullRequestContributions
-        totalIssueContributions
-        totalPullRequestReviewContributions
-        contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
-      }
-      pullRequests { totalCount }
-      issues { totalCount }
-    } }"""
-    % USER
-)
-cc = gql["contributionsCollection"]
-dias = [d for w in cc["contributionCalendar"]["weeks"] for d in w["contributionDays"]]
+# O GITHUB_TOKEN do Actions não vê o calendário de contribuições, por isso
+# reconstruímos a atividade a partir dos commits dos repositórios públicos.
+desde = (datetime.now() - timedelta(days=364)).strftime("%Y-%m-%dT00:00:00Z")
+contagem = {}
+for r in own:
+    for pagina in range(1, 6):
+        commits = tentar(
+            f"/repos/{USER}/{r['name']}/commits?author={USER}&since={desde}&per_page=100&page={pagina}", []
+        )
+        for c in commits:
+            dia = c["commit"]["author"]["date"][:10]
+            contagem[dia] = contagem.get(dia, 0) + 1
+        if len(commits) < 100:
+            break
+
+inicio = date.today() - timedelta(days=364)
+inicio -= timedelta(days=(inicio.weekday() + 1) % 7)
+dias = []
+d0 = inicio
+while d0 <= date.today():
+    dias.append({"date": d0.isoformat(), "contributionCount": contagem.get(d0.isoformat(), 0)})
+    d0 += timedelta(days=1)
+
+commits_total = tentar(f"/search/commits?q=author:{USER}&per_page=1", {}).get("total_count", 0)
+prs = tentar(f"/search/issues?q=author:{USER}+type:pr&per_page=1", {}).get("total_count", 0)
+issues = tentar(f"/search/issues?q=author:{USER}+type:issue&per_page=1", {}).get("total_count", 0)
+commits_12m = sum(contagem.values())
 
 hoje = date.today().isoformat()
-dias_passados = [d for d in dias if d["date"] <= hoje]
+dias_passados = dias
 
 maior = atual = 0
 for d in dias_passados:
@@ -84,17 +92,17 @@ top = sorted(langs.items(), key=lambda kv: kv[1], reverse=True)[:6]
 cores = ["#512BD4", "#3776AB", "#3178C6", "#F05032", "#3DDC84", "#8957E5"]
 W = 495
 caixas = [
-    ("Commits (12 meses)", cc["totalCommitContributions"]),
-    ("Pull requests", gql["pullRequests"]["totalCount"]),
-    ("Issues", gql["issues"]["totalCount"]),
-    ("Reviews", cc["totalPullRequestReviewContributions"]),
+    ("Commits (total)", commits_total),
+    ("Pull requests", prs),
+    ("Issues", issues),
+    ("Linguagens usadas", len(langs)),
     ("Repositórios públicos", user["public_repos"]),
     ("Estrelas", stars),
     ("Forks recebidos", forks),
     ("Seguidores", user["followers"]),
 ]
 extras = [
-    ("Contribuições (12 meses)", cc["contributionCalendar"]["totalContributions"]),
+    ("Commits (12 meses)", commits_12m),
     ("Sequência atual", f"{seq_atual} dias"),
     ("Maior sequência", f"{maior} dias"),
     ("Dias com atividade", dias_ativos),
@@ -137,10 +145,10 @@ for i, (nome, valor) in enumerate(extras):
 o.append(f'<text x="24" y="{y_heat}" class="t">Calendário de contribuições</text>')
 maximo = max((d["contributionCount"] for d in dias), default=1) or 1
 paleta = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
-semanas = cc["contributionCalendar"]["weeks"]
+semanas = [dias[i : i + 7] for i in range(0, len(dias), 7)]
 passo = (W - 48) / max(len(semanas), 1)
 for wi, w in enumerate(semanas):
-    for d in w["contributionDays"]:
+    for d in w:
         c = d["contributionCount"]
         nivel = 0 if c == 0 else min(4, 1 + int(3 * (c - 1) / max(maximo - 1, 1)))
         dow = datetime.fromisoformat(d["date"]).weekday()
